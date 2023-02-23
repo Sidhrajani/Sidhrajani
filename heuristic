@@ -1,0 +1,268 @@
+add_coin([[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]], 'R', 2)
+>>> [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 'R', 0]]
+add_coin([[0,0,0,0,0],[0,0,0,0,0],['R',0,0,0,0],['Y','R',0,'R','Y']], 'Y', 1)
+>>> [[0, 0, 0, 0, 0],
+ [0, 0, 0, 0, 0],
+ ['R', 'Y', 0, 0, 0],
+ ['Y', 'R', 0, 'R', 'Y']]
+ .....................................................................................................................................................................
+ def add_coin(board, coin, column):
+    
+    """This function will updates the game state after a move has been made, 
+       and returns the updated version of the board.
+       
+       Get the parameters in the form of nested list, in order to represent the current state of the board.
+       Players coin 'R' and 'Y' are represented by a string value.
+       The column - which the player dropping the coin, is represent by an integer value.
+       """
+    
+    # Search for the last available row in the given board column.
+    available_row = -1
+    
+    # Go through each row of the column.
+    for idx,row in enumerate(board):
+        
+        # If there's a 0 in the given row, it is available.
+        if row[column] == 0:
+            available_row = idx
+        else: # If there's a not available row, then the rest of them are going to be unavailable.
+              # so the loop can be break.
+            break
+            
+    # Set the coin character in the corresponding row and column.
+    board[available_row][column] = coin
+    
+    # Return the updated board.
+    return board
+
+# print(add_coin([[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]], 'R', 2)).
+# print(add_coin([[0,0,0,0,0],[0,0,0,0,0],['R',0,0,0,0],['Y','R',0,'R','Y']], 'Y', 1)).
+...................................................................................................................................................................
+Task 2 (6 marks)
+To ascertain whether the game is finished, we need a function to determine whether a particular player has won. Write a function is_winner(board, coin). This function should take the following parameters:
+
+board: A list of lists representing the current state of the board
+coin: The character representing the current player's coin, i.e. 'R' or 'Y' Your function should return True if the player using the coin coins has won the game in the current board position and False otherwise.
+Here are some examples you can use to call your function:
+
+is_winner([[0,0,0,0,0],[0,0,0,0,0],['R',0,0,0,0],['Y','R',0,'R','Y']], 'Y')
+>>> False
+is_winner([['Y',0,0,0],['Y',0,0,0],['Y',0,'R','R'],['Y',0,'R','R']], 'R')
+>>> True
+.......................................................................................................................................................................
+def is_winner(board, coin) :
+    """
+    Verifies is the player  the winner, by checking the position of the coin as a square, 
+    and returns True or False. 
+    A nested list will represents the current status of the board.
+    A string value will represents the coin.
+    """
+    
+    # Get the height and width of the board.
+    height = len(board) # Validating the players movement in the board lenght.
+    width = len(board[0]) # Defining the row length.
+    
+    # Go through each row except the last one.
+    for y in range(height-1):
+        
+        # Go through each column except the last one.
+        for x in range(width-1):
+            
+            # If current item is a player's coin, check the one above it.
+            if board[y][x] == coin:
+                
+                # If that item is a player's coin too, check the next one.
+                if board[y+1][x] == coin:
+                    
+                    # And the next one.
+                    if board[y][x+1] == coin:
+                        
+                        # If the 4 items that form the square are coins from the player, then he has won.
+                        if board[y+1][x+1] == coin:
+                            
+                            return True
+                        
+    # If the loop in all the board is completed without the function returning true, then the player hasn't won.
+    
+    return False
+
+# print(is_winner([[0,0,0,0,0],[0,0,0,0,0],['R',0,0,0,0],['Y','R',0,'R','Y']], 'Y')). 
+# print(is_winner([['Y',0,0,0],['Y',0,0,0],['Y',0,'R','R'],['Y',0,'R','R']], 'R')).
+
+....................................................................................................................................................................
+Task 3 (9 marks)
+With these essential functions in place, we now wish to work towards building a competent AI to play our Connect Square game. The concept of a heuristic is central to building an AI for most strategy games. A heuristic is a function that maps a particular game state to a numeric value, indicating how desirable that state is to a particular player. For example, a game state in which the player is about to win could be assigned a very high heuristic value, while a game state in which the player is about to lose could be assigned a very low value.
+
+There are numerous ways in which we can define a heuristic for any particular game, but we will adopt the following approach:
+
+We will consider each overlapping 2 x 2 square within the grid. For example, the points (0,0), (0, 1), (1, 0) and (1,1) will represent one square. (1,0), (1, 1), (2, 0) and (2,1) will represent a second square and so on.
+
+Consider the four points making up each square:
+
+If any one of those points contains an opponent's coin, it will be impossible to win the game by filling this square with our own coins and the square will therefore be assigned a value of 0.
+If one of the points contains our coin and the other three are empty the square will be assigned a value of 1.
+If two of the points contain our coins and the other two points are empty then the square will be assigned a value of 10.
+If three of the points contain our coins and the other one is empty then the square will be assigned a value of 100.
+If all four of the points contain our coins then we have won the game and the square will be assigned a value of 1000.
+The heuristic value for this game state is the sum of the value of each square in the grid. Note that there are some drawbacks to using this heuristic. In particular, we don't consider how close our opponent is to completing a square so an AI that uses this heuristic will not try to prevent an opponent from completing his square. You might like to consider how you could improve upon this heuristic, but for this task you should implement the heuristic as described. Write a function heuristic(board, coin) that returns the heuristic value of the board for the player using the coin coins.
+
+Here are some examples you can use to call your function:
+
+heuristic([[0,0,0,0,0],[0,0,0,0,0],['R',0,0,0,0],['Y','R',0,'R','Y']], 'R')
+>>> 3
+heuristic([['Y',0,0,0],['Y',0,0,0],['Y',0,'R','R'],['Y',0,'R','R']], 'R')
+>>> 1021
+.........................................................................................................................................
+def heuristic(board, coin):
+    """
+    Loops throughout the board and calculates the heuristic values for the possible movements.
+    
+    """
+    # Height and width of the board.
+    height = len(board)
+    width = len(board[0])
+    
+    # Accumulative variable to store the heuristic of the board.
+    total = 0
+    
+    # Go through each row except the last one.
+    for y in range(height-1):
+        
+        # Go through each column except the last one.
+        for x in range(width-1):
+            
+            # Get all the positions to form a square from the current position.
+            positions = [board[y][x],board[y+1][x],board[y][x+1],board[y+1][x+1]]
+            
+            # Variable to store the amount of coins in the square.
+            coins = 0
+            
+            # Go through each value of the square.
+            for value in positions:
+                
+                # If any value is not the player coin's nor empty then it is from the opponent.
+                if value not in [coin,0]:
+                    
+                    # If there's a coin from the oponent, then it gets a score of 0 and 
+                    # we do not need to check the other items of the square.
+                    score = 0
+                    break
+                    
+                # If the current item in the square is a coin, add it to the count.
+                elif value == coin:
+                    coins += 1
+            # If the loop is completed without breaks, it means there are no coins from the opponent.
+            else:
+                # Calculate the score from the amount of coins found.
+                
+                if coins > 0:
+                    score = 10**(coins-1)
+                else:
+                    score = 0
+                    
+            # Add the score of the current square to the total heuristic of the board.
+            
+            total += score
+            
+    return total
+
+# print(heuristic([[0,0,0,0,0],[0,0,0,0,0],['R',0,0,0,0],['Y','R',0,'R','Y']], 'R')).
+# print(heuristic([['Y',0,0,0],['Y',0,0,0],['Y',0,'R','R'],['Y',0,'R','R']], 'R')).
+...................................................................................................................................................................
+Task 4 (9 marks)
+We now wish to create an AI player capable of playing (and hopefully winning) our Connect Square game. Write a function ai_move(board, coin) to play the Connect Square game. Your function should generate a list of all possible moves from the current board. Your function should then generate the board states that arise from making each of these moves and select the move that results in the state with the highest heuristic value. If two states have the same heuristic value, then select the one that results from the using the numerically lowest column (e.g. column 1 is preferred over column 2 if the heuristic values are identical). Finally, your function should return the new board state after applying the best move.
+
+Here are some examples you can use to call your function:
+
+ai_move([[0,0,0,0,0],[0,0,0,0,0],['R',0,0,0,0],['Y','R',0,'R','Y']], 'Y')
+>>> [[0, 0, 0, 0, 0],
+ [0, 0, 0, 0, 0],
+ ['R', 0, 0, 'Y', 0],
+ ['Y', 'R', 0, 'R', 'Y']]
+ai_move([[0,0,0,0,0],['Y',0,0,0,0],['R',0,0,0,'Y'],['Y','R',0,'R','Y']], 'Y')
+>>> [[0, 0, 0, 0, 0],
+ ['Y', 0, 0, 0, 0],
+ ['R', 0, 0, 'Y', 'Y'],
+ ['Y', 'R', 0, 'R', 'Y']]
+ .....................................................................................................................................................................
+ # Import method to get deepcopys of mutable objects (lists).
+from copy import deepcopy
+
+def ai_move(board, coin):
+    """
+    All the possible moves will be generated in a list,
+    and returns the board with highest possibe heuristic value.
+    """
+    
+    # Variables to store the best board for the next move of the ai.
+    best_movement = None
+    max_heuristic = -1 # Initialize as -1 because all posible heurisitc values are positive.
+    
+    # Go through every item of first row, from left to right prioritizing the lower index columns.
+    for column,value in enumerate(board[0]):
+        
+        # If current item is 0, then the ai can play in that column.
+        if value == 0:
+            # Calculate the board if the ai trows a coin in that column.
+            # Create a deep copy so the method doesn't modify the original board.
+            
+            movement_board = add_coin(deepcopy(board),coin,column)
+            # Get the heuristic of the board after the possible move.
+            
+            heuristic_value = heuristic(movement_board,coin)
+            # If the calculated heuristic is greater than the current maximum, then that's the best move.
+            
+            if heuristic_value > max_heuristic:
+                # Save the current move board, heuristic value and column.
+                best_movement = movement_board
+                max_heuristic = heuristic_value
+                
+    return best_movement
+
+# print(ai_move([[0,0,0,0,0],[0,0,0,0,0],['R',0,0,0,0],['Y','R',0,'R','Y']], 'Y')).
+# print(ai_move([[0,0,0,0,0],['Y',0,0,0,0],['R',0,0,0,'Y'],['Y','R',0,'R','Y']], 'Y')).
+..................................................................................................................................................................
+Code to run your game
+The following functions will allow you to play a game against your AI. This may be useful when debugging.
+..................................................................................................................................................................
+def moves_exist(board) :
+    """
+    A move can still be made if any blank space exists on the top row
+    """
+    if 0 in board[0] :
+        return True
+    return False
+
+def nice_print(board) :
+    """
+    Formats the board for nicer display
+    """
+    for line in board :
+        print(*line)
+    
+def play_game(rows, cols) :
+    """
+    Plays a game with a human player against your AI
+    """
+    # Instantiate an empty board
+    board = [([0]*cols) for i in range(rows)]
+
+    # Continue playing as long as a legal move can still be made
+    while(moves_exist(board)) :
+
+        # AI plays first with the red tokens
+        board = ai_move(board, 'R')
+        nice_print(board)
+
+        # Check if the AI Player has won the game
+        if (is_winner(board, 'R')) :
+            print('AI Wins!')
+            break
+
+        # Player moves next with the yellow tokens
+        player_move = input('Enter your move: ')
+        board = add_coin(board, 'Y', int(player_move))
+        if (is_winner(board, 'Y')) :
+            print('You win!')
+            break
+            .....................................................................................................................................................
