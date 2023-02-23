@@ -1,0 +1,1145 @@
+Assignment 2: COMP20008 Data Science Project
+July 11, 2022
+Due Date
+Sunday 7th August, 11:59PM
+Objectives
+The objectives of this assignment are
+ To gain experience in practical data wrangling with real-world datasets.
+ To practice using a variety of data analysis algorithms and determining suitable approaches to a real-world problem.
+ To build e-portfolio as a data scientist in training.
+ To gain experience in written communication of analysis and results on a topic related
+to data science.
+Hypothetical Scenario and Objective
+It has often been observed that energy consumption tends to be at its highest on days with
+hotter temperatures. As a data scientist, you have been tasked with developing models that
+predicts the maximum daily energy use and pricing based on weather data. The hope is that
+these models can be used to predict likely energy demands based on a weather forecast, which
+can help energy companies understand plan for future usage, and help businesses plan when
+to conduct energy-intensive operations.
+The following two datasets are provided:
+ weather data.csv contains key weather indicators, such as minimum and maximum
+temperatres for the city of Melbourne for each day between January and August 2021.
+This data has been extracted as-is from the Bureau of meteorology and collated into a
+single file for your convenience.
+ price demand data.csv contains energy price and demand figures for the state of Victoria for each half hour period between January and August 2021. This data has been
+extracted from the Australian Energy Market Operator, and modified slightly for the
+purposes of this assignment.
+1
+Working in a team of 3-4 students, you should build two models:
+ A model which predicts the maximum daily energy usage based on the provided weather
+data.
+ A model which predicts the maximum daily price category based on the provided
+weather data.
+You will also need to evaluate the effectivness of the model.
+Assessment
+Your Report
+Your report should be no more than 2000 words in length excluding figures and tables. Your
+report should include the following information:
+1. What wrangling and aggregation methods have you applied? Why have you chosen
+these methods over other alternatives?
+2. How have you gone about building your models and how do your models work?
+3. How effective are your models? How have you evaluated this?
+4. What insights can you draw from your analysis? For example, which input variables
+are most valuable for predicting energy usage/price?
+5. Why are your results significant and valuable?
+6. What are the limitations of your results and how can the project be improved for future?
+Your report should make effective use of visualisations to support your argument.
+Git repository
+All of the code you develop as part of this project should be stored in a GitHub repository.
+A link to create your git repository has been provided on Canvas.
+Only one member of your group should create a GitHub repository, the other group
+members should be added to the same GitHub repository. This will ensure that all group
+members are able to collaborate on the same codebase.
+Submission Instructions
+Your final report must be uploaded via Canvas by the due date. All of your code files, and
+any other supporting files used, should be placed in a .zip archive and uploaded via Canvas
+by the due date. It is essential that any numerical results or visualisations used in the final
+report can be reproduced by running your code. You must also include a link to your GitHub
+repository.
+Your report, code files and any other supporting documentation must also be pushed
+to your git repository. You must ensure that the README file within your git repository
+contains the names and student IDs of each member of your group.
+2
+Academic Honesty
+You are expected to follow the academic honesty guidelines on the University website
+https://academichonesty.unimelb.edu.au
+A project discussion forum has also been created on the subject LMS. Please use this in
+the first instance if you have questions, since it will allow discussion and responses to be seen
+by everyone.
+...............................................................................................................................................................
+import pandas as pd #...................................................to load and manipulate data
+import numpy as np #....................................................to calculation
+import seaborn as sns #.................................................to plot the heatmap
+
+from matplotlib import pyplot as plt #..................................to plot graphs
+from sklearn import neighbors #.........................................to find the nearest neighbour
+from sklearn.model_selection import train_test_split #..................to split the data into training and testing sets
+from sklearn.metrics import accuracy_score #............................to check the accuracy score
+from sklearn import preprocessing #.....................................
+from sklearn.tree import DecisionTreeClassifier #.......................to buid a classification tree
+from sklearn.preprocessing import MinMaxScaler #........................
+from ipywidgets import interactive #....................................to create interactive charts
+from sklearn.metrics import normalized_mutual_info_score #..............to calculate normalised mutual information
+from sklearn.metrics import mean_squared_error, r2_score#...............to calculate linear regression model
+from sklearn.model_selection import KFold
+from sklearn.impute import SimpleImputer
+from sklearn import tree
+from sklearn.feature_selection import SelectKBest,chi2
+from sklearn.feature_selection import mutual_info_classif
+from sklearn.decomposition import PCA
+from scipy.stats import chi2_contingency
+import scipy.stats as stats 
+%matplotlib inline
+
+Data_w = pd.read_csv("weather_data.csv")
+Data_p = pd.read_csv("price_demand_data.csv")
+
+display(Data_w)
+display(Data_p)
+.....................................................................................................................................................................
+	 # Check the weather data types 
+Data_w.info()
+.....................................................................................................................................................................
+# the date type has been changed to date time format, assign to original 
+
+Data_w ["Date"] = pd.to_datetime(Data_w ["Date"],dayfirst = True)
+Data_w ["Date"]
+....................................................................................................................................................................
+Data_p
+.....................................................................................................................................................................
+#Seprating Dates & Time in diffrent coloumn
+
+Data_p['Date'] = pd.to_datetime(Data_p['SETTLEMENTDATE'],dayfirst = True). dt. date
+Data_p['Time'] = pd.to_datetime(Data_p['SETTLEMENTDATE'],dayfirst = True). dt. time
+
+display(Data_p.head(10))
+...................................................................................................................................................................
+# Check the data type in all the columns
+
+Data_p.info()
+....................................................................................................................................................................
+# We need to extract the dates from date_time data from the settlement date column, for that we convert the column type to datetime format instead of object type
+
+Data_p["Date"] = pd.to_datetime(Data_p["Date"])
+Data_p["Date"].head()
+....................................................................................................................................................................
+# assign to original
+
+Data_p["Date"] = Data_p["Date"] = pd.to_datetime(Data_p["Date"])
+Data_p["Date"]
+....................................................................................................................................................................
+#Now make them as groups and find the maximum value by DataMining
+
+Data_pg = Data_p.groupby("Date").max("TOTALDEMAND")
+Data_pg
+....................................................................................................................................................................
+Data_p["TOTALDEMAND"].describe()
+....................................................................................................................................................................
+#Merged dataset into a dataframe assigned by MergeData
+
+MergeData = Data_w.merge(Data_pg, how = 'inner', on = 'Date') 
+MergeData
+....................................................................................................................................................................
+# conversion of average daily temperature for predicting overall 
+
+temp = MergeData.loc[:, "Minimum temperature (°C)":"Maximum temperature (°C)"]
+MergeData['Average_temp_/day(°C)'] = temp.mean(axis = 1)
+MergeData
+....................................................................................................................................................................
+# Renaming TOTALDEMAND to MAXDEMAND
+
+MergeData.rename(columns = {'TOTALDEMAND':'MAXDEMAND'}, inplace = True)
+display(MergeData.head())
+....................................................................................................................................................................
+MergeData.info()
+....................................................................................................................................................................
+FEATURES = ['MAXDEMAND','Minimum temperature (°C)','Maximum temperature (°C)','Rainfall (mm)','Evaporation (mm)','Sunshine (hours)','Speed of maximum wind gust (km/h)'
+         ,'9am Temperature (°C)','3pm Temperature (°C)','Average_temp_/day(°C)'] 
+
+MergeData[FEATURES].corr(method = 'pearson')
+....................................................................................................................................................................
+# Compared maximum daily energy used during different session in a year based on temperature
+
+fig, axes = plt.subplots(nrows = 2, ncols = 2, figsize = (12,10))
+
+ax1 = axes[0][0]
+summer_start = '2020-12-01'
+summer_end =  '2021-02-28'
+summer = MergeData.loc[(MergeData['Date'] >= summer_start) & (MergeData['Date'] <= summer_end)]
+summer.plot.scatter (x = 'Maximum temperature (°C)', y = 'MAXDEMAND', title = "summer", ax = ax1, lw = 1, c = 'r')
+print("Pearson r is ",summer['Maximum temperature (°C)'].corr(summer['MAXDEMAND']), "between Maximum temperature and Maximum demand in summer time")
+
+
+ax2 = axes[0][1]
+autumn_start = '2021-3-01'
+autumn_end = '2021-5-31'
+autumn = MergeData.loc[(MergeData['Date'] >= autumn_start) & (MergeData['Date'] <= autumn_end)]
+autumn.plot.scatter (x = 'Average_temp_/day(°C)', y = 'MAXDEMAND',title = "autumn", ax = ax2, lw = 1, c = 'b')
+print("Pearson r is ",autumn['Average_temp_/day(°C)'].corr(autumn['MAXDEMAND']), "between Average temperature and Maximum demand  in Autumn time")
+
+
+ax3 = axes[1][0]
+winter_start = '2021-06-01'
+winter_end = '2021-08-31'
+winter = MergeData.loc[(MergeData['Date'] >= '2021-06-01') & (MergeData['Date'] <= '2021-08-31') ]
+winter.plot.scatter (x = 'Maximum temperature (°C)', y = 'MAXDEMAND',title = "winter", ax = ax3, lw = 1, c = 'k')
+print("Pearson r is ",winter['Maximum temperature (°C)'].corr(winter['MAXDEMAND']), "between Maximum temperature and Maximum demand in winter time")
+
+
+ax4 = axes[1][1]
+Day_start = '2020-01-01'
+Day_end = '2021-08-31'
+Overall = MergeData.loc[(MergeData['Date'] >= '2021-01-01') & (MergeData['Date'] <= '2021-08-31') ]
+Overall.plot.scatter (x = 'Minimum temperature (°C)', y = 'MAXDEMAND', title = "Overall_year", ax = ax4, lw = 1, c = 'k')
+print("Pearson r is ",Overall['Minimum temperature (°C)'].corr(Overall['MAXDEMAND']), "between Minimum temperature and Maximum demand Overall_year")
+print("Pearson r is ",Overall['Maximum temperature (°C)'].corr(Overall['MAXDEMAND']), "between Maximum temperature and Maximum demand Overall_year")
+
+
+
+plt.subplots_adjust(left = 0.1,bottom = 0.1, right = 0.9, top = 0.9, wspace = 0.4, hspace = 0.4)
+plt.show()
+....................................................................................................................................................................
+# get max. energy usage of each day
+
+new_price_df = MergeData.groupby(['Date'])['MAXDEMAND'].max().reset_index()
+new_price_df.rename(columns = {'TOTALDEMAND':'MAXDEMAND'}, inplace = True)
+new_price_df.info()
+display(new_price_df)
+....................................................................................................................................................................
+sns.pairplot(Data_w, kind = 'reg', plot_kws = {'ci':None, 'color':'xkcd:red', 'scatter_kws': {'color':'gray'}})
+....................................................................................................................................................................
+# Correlation values- Strong positive correlations has light colour, negative corrilations has dark colour.
+
+plt.figure(figsize = (16,8))
+sns.heatmap(MergeData.corr(), annot = True, annot_kws = {"size":12})
+
+plt.title("Corrilation Map to explain the strength of relationship")
+....................................................................................................................................................................
+#When the weather is extramly low or exreamly high, then the total demand increases, as people use the energy to maintain the temperature.
+
+MergeData.plot.scatter (x = 'Maximum temperature (°C)',
+                        y = 'MAXDEMAND')
+....................................................................................................................................................................
+myMax = max(max(MergeData['Maximum temperature (°C)']), max(MergeData['MAXDEMAND']))
+myMax
+
+....................................................................................................................................................................
+# get the min
+
+myMin = min(min(MergeData['Maximum temperature (°C)']), max(MergeData['MAXDEMAND']))
+myMin
+....................................................................................................................................................................
+MergeData.plot.scatter (x = '3pm Temperature (°C)',
+                        y = 'MAXDEMAND')
+....................................................................................................................................................................
+myMax = max(max(MergeData['3pm Temperature (°C)']), max(MergeData['MAXDEMAND']))
+myMax
+....................................................................................................................................................................
+myMin = min(min(MergeData['3pm Temperature (°C)']), max(MergeData['MAXDEMAND']))
+myMin
+....................................................................................................................................................................
+col = MergeData.loc[:, "Minimum temperature (°C)":"Maximum temperature (°C)"]
+MergeData['Average_temp_/day(°C)'] = col.mean(axis = 1)
+MergeData
+...................................................................................................................................................................
+sns.pairplot(MergeData, kind = 'reg', plot_kws = {'ci':None, 'color':'xkcd:red', 'scatter_kws': {'color':'gray'}})
+....................................................................................................................................................................
+MergeData.plot.scatter (x = 'Minimum temperature (°C)',
+                        y = 'MAXDEMAND')
+....................................................................................................................................................................
+MergeData.plot.scatter (x = 'Maximum temperature (°C)',
+                        y = 'MAXDEMAND')
+....................................................................................................................................................................
+MergeData.plot.scatter (x = 'Average_temp_/day(°C)',
+                        y = 'MAXDEMAND')
+
+....................................................................................................................................................................
+myMax = max(max(MergeData['Average_temp_/day(°C)']), max(MergeData['MAXDEMAND']))
+myMax
+....................................................................................................................................................................
+myMin = min(min(MergeData['Average_temp_/day(°C)']), max(MergeData['MAXDEMAND']))
+myMin
+....................................................................................................................................................................
+# when the temperature increases, the evaporation increases. So it will gives a linear graph.
+
+MergeData.plot.scatter (x = 'Maximum temperature (°C)',
+                        y = 'Evaporation (mm)', title = " Distribution of Evaporation With Increasing Temperature", c = '#07700a', alpha = 0.7)
+....................................................................................................................................................................
+Linear = ['Evaporation (mm)','Maximum temperature (°C)']
+MergeData[Linear].corr(method = 'pearson')
+....................................................................................................................................................................
+#To add an identity line, we try to get the max
+
+myMax = max(max(MergeData['Maximum temperature (°C)']), max(MergeData['Evaporation (mm)']))
+myMax
+....................................................................................................................................................................
+# get the min
+
+myMin = min(min(MergeData['Evaporation (mm)']), max(MergeData['MAXDEMAND']))
+myMin
+....................................................................................................................................................................
+MergeData.plot.scatter (x = 'Evaporation (mm)',
+                        y = 'MAXDEMAND',  title= "Total Demand with Evaporation",c = '#07700a', alpha = 0.7)
+
+....................................................................................................................................................................
+Linear = ['Evaporation (mm)','MAXDEMAND']
+MergeData[Linear].corr(method = 'pearson')
+....................................................................................................................................................................
+# get the max
+
+myMax = max(max(MergeData['Evaporation (mm)']), max(MergeData['MAXDEMAND']))
+myMax
+....................................................................................................................................................................
+# get the min
+
+myMin = min(min(MergeData['Evaporation (mm)']), max(MergeData['MAXDEMAND']))
+myMin
+....................................................................................................................................................................
+MergeData.plot.scatter (x = 'Sunshine (hours)',
+                        y = 'Average_temp_/day(°C)', title = "Impact of Sunshine on Temperature",c = '#07700a', alpha = 0.7)
+....................................................................................................................................................................
+# 1.  sunshne data can be effective on solar energy.When the sunshine increases, the Total demand decreases. negatie linear graph.
+
+MergeData.plot.scatter (x = 'Sunshine (hours)',
+                        y = 'MAXDEMAND',  title = "Impact of Sunshine on Max_Demand",c = '#07700a', alpha = 0.7)
+....................................................................................................................................................................
+col = MergeData.loc[:, "Minimum temperature (°C)":"Maximum temperature (°C)"]
+MergeData['avg_temp'] = col.mean(axis = 1)
+
+MergeData
+
+....................................................................................................................................................................
+# get the max
+
+myMax = max(max(MergeData['Sunshine (hours)']), max(MergeData['MAXDEMAND']))
+myMax
+....................................................................................................................................................................
+# get the min
+
+myMin = min(min(MergeData['Sunshine (hours)']), max(MergeData['MAXDEMAND']))
+myMin
+...................................................................................................................................................................
+#but the sunshine can be affected by the amount of cloud
+
+MergeData.plot.scatter (x = '9am cloud amount (oktas)',
+                        y = 'MAXDEMAND',  title = "Impact of Cloud Amount on Total Demand",c = '#07700a', alpha = 0.7)
+....................................................................................................................................................................
+# Less sunshine may due to the cloud amount 
+
+MergeData.plot.scatter (x = 'Sunshine (hours)',
+                        y = '9am cloud amount (oktas)',  title = "How the Cloud Amount Will Impact On Sunshine",c = '#07700a', alpha = 0.7)
+
+....................................................................................................................................................................
+# 2.  Speed of maximum wind gust data can be effective on energy.
+
+MergeData.plot.scatter (x = 'Speed of maximum wind gust (km/h)',
+                        y = 'MAXDEMAND',  title = "How the Speed of maximum wind gust Will Impact On Total Demand",c = '#07700a', alpha = 0.7)
+ ....................................................................................................................................................................
+ MergeData.plot.scatter (x = 'Maximum temperature (°C)',
+                        y = '3pm relative humidity (%)', title = "Changing Pattern of Relative Humidity with Increasing Temperature",c = '#07700a', alpha = 0.7)
+                       
+....................................................................................................................................................................
+Linear = ['3pm relative humidity (%)','Maximum temperature (°C)']
+MergeData[Linear].corr(method = 'pearson')
+....................................................................................................................................................................
+# get the max
+
+myMax = max(max(MergeData['Maximum temperature (°C)']), max(MergeData['3pm relative humidity (%)']))
+myMax
+
+
+....................................................................................................................................................................
+# get the min
+
+myMin = min(min(MergeData['Maximum temperature (°C)']), max(MergeData['3pm relative humidity (%)']))
+myMin
+
+....................................................................................................................................................................
+# Select DataFrame rows between two dates
+
+summer_start_date = '2020-12-01'
+summer_end_date = '2021-02-28'
+
+mask = (MergeData['Date'] >= summer_start_date) & (MergeData['Date'] <= summer_end_date)
+df_summer = MergeData.loc[mask]
+
+....................................................................................................................................................................
+plt.scatter(df_summer['Maximum temperature (°C)'], df_summer['MAXDEMAND'])
+plt.xlabel("Maximum temperature (°C)")
+plt.ylabel("Maximum demand")
+plt.title("Summer time")
+plt.show()
+
+print("Pearson r is",df_summer['Maximum temperature (°C)'].corr(df_summer['MAXDEMAND']),"in summer time")
+
+....................................................................................................................................................................
+# Select DataFrame rows between two dates
+
+winter_start_date = '2021-06-01'
+winter_end_date = '2021-08-31'
+
+mask = (MergeData['Date'] >= winter_start_date) & (MergeData['Date'] <= winter_end_date)
+df_winter = MergeData.loc[mask]
+display(df_winter)
+....................................................................................................................................................................
+plt.scatter(df_winter['Maximum temperature (°C)'], df_winter['MAXDEMAND'])
+plt.xlabel("Maximum temperature (°C)")
+plt.ylabel("Maximum demand")
+plt.title("Winter time")
+plt.show()
+
+print("Pearson r is",df_winter['Maximum temperature (°C)'].corr(df_winter['MAXDEMAND']),"in winter time.")
+
+....................................................................................................................................................................
+# Select DataFrame rows between two dates
+
+autumn_start_date = '2021-3-01'
+autumn_end_date = '2021-5-31'
+
+mask = (MergeData['Date'] >= autumn_start_date) & (MergeData['Date'] <= autumn_end_date)
+df_autumn = MergeData.loc[mask]
+display(df_autumn)
+
+....................................................................................................................................................................
+plt.scatter(df_autumn['Maximum temperature (°C)'], df_autumn['MAXDEMAND'])
+plt.xlabel("Maximum temperature (°C)")
+plt.ylabel("Maximum demand")
+plt.title("Autumn time")
+plt.show()
+
+print("Pearson r is",df_autumn['Maximum temperature (°C)'].corr(df_autumn['MAXDEMAND']),"in winter time.")
+df_autumn
+
+....................................................................................................................................................................
+Question 1
+....................................................................................................................................................................
+##  Evaluation
+from sklearn import linear_model
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+X = MergeData[['Average_temp_/day(°C)']]
+y = MergeData['MAXDEMAND']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state = 42)
+
+
+# initialise the model
+lm = linear_model.LinearRegression()
+
+
+#model = lm.fit(X_train, y_train)
+
+model = lm.fit(X_train , y_train)
+
+y_test_predictions = lm.predict(X_test)
+
+print('actual MAXDEMAND values of the first 5 test data:')
+print(y_test[0:5])
+print('')
+print('predicted MAXDEMAND values of the first 5 test data:')
+print(y_test_predictions[0:5])
+print('')
+
+# coefficients
+
+print('Coefficients: ', end = ' ')
+print(lm.coef_)
+print('')
+
+# intercept:
+print('Intercept: ', end = ' ')
+print(lm.intercept_)
+print('')
+
+# R^2
+r2_test = lm.score(X_test, y_test)
+r2_train = lm.score(X_train, y_train)
+
+print('Coefficient of determination (test): {0:.2f}'.format(r2_test))
+print('Coefficient of determination (training): {0:.2f}'.format(r2_train))
+....................................................................................................................................................................
+"""
+Coefficient of determination (test): 0.10
+Coefficient of determination (training): 0.03 
+
+Coefficient is very low. the Maximum temperature and MAXDEMAND plot's is U shape and linear
+regression is not right choice to find a model between them,so we should choose another variable.
+
+we can consider absolute diffrence's between average temperature and 20 (°C) instead of Maximum temperature.
+
+20 (°C) is ideal temperature and the demand is minimum in 20 (°C).
+
+"""
+....................................................................................................................................................................
+# Diff daily temperature
+
+temp = MergeData.loc[:, "Average_temp_/day(°C)"]
+MergeData['Diff_temp_/day(°C)'] = abs(20-temp)
+display(MergeData.head())
+
+....................................................................................................................................................................
+# Linear graph
+
+MergeData.plot.scatter (x = 'Diff_temp_/day(°C)',
+                        y = 'MAXDEMAND')
+
+....................................................................................................................................................................
+#The plot between MAXDEMAND and Diff_temp_/day(°C) is almost linear.
+....................................................................................................................................................................
+# Corrilarion values- Strong positive corrilations has light colour, negative corrilations has dark colour.
+
+plt.figure(figsize = (16,8))
+sns.heatmap(MergeData.corr(), annot = True, annot_kws = {"size":12})
+
+plt.title("Corrilation Map to explain the strength of relationship")
+....................................................................................................................................................................
+# Correlation between MAXDEMAND and Diff_temp_/day(°C) is 74%.
+# that shows strong relationship.
+....................................................................................................................................................................
+##  Evaluation
+from sklearn import linear_model
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+X = MergeData[['Diff_temp_/day(°C)']]
+y = MergeData['MAXDEMAND']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.15, random_state = 42)
+
+
+# initialise the model
+lm = linear_model.LinearRegression()
+
+
+#model = lm.fit(X_train, y_train)
+model = lm.fit(X_train , y_train)
+
+y_test_predictions = lm.predict(X_test)
+
+#Evaluation
+print('actual MAXDEMAND values of the first 5 test data:')
+print(y_test[0:5])
+print('')
+print('predicted MAXDEMAND values of the first 5 test data:')
+print(y_test_predictions[0:5])
+print('')
+
+# coefficients
+
+print('Coefficients: ', end = ' ')
+print(lm.coef_)
+print('')
+
+# intercept:
+print('Intercept: ', end = ' ')
+print(lm.intercept_)
+print('')
+
+# R^2
+r2_test = lm.score(X_test, y_test)
+r2_train = lm.score(X_train, y_train)
+
+print('Coefficient of determination (test): {0:.2f}'.format(r2_test))
+print('Coefficient of determination (training): {0:.2f}'.format(r2_train))
+
+
+....................................................................................................................................................................
+## Plot the residuals for the test data as well as the training data of the model.
+
+##Include legends in the scatter plot; include the Coefficient of Determination for each legend.
+
+import matplotlib.pyplot as plt
+# Plot residules
+
+
+y_test_h = lm.predict(X_test)
+y_train_h = lm.predict(X_train)
+
+residual_train = [y - yh for y, yh in zip(y_train, y_train_h)]
+residual_test = [y - yh for y, yh in zip(y_test, y_test_h)]
+
+plt.scatter(y_test_h, residual_test, color='C0', label = 'R^2 (test):{0:.2f}'.format(r2_test))
+plt.scatter(y_train_h, residual_train, color='C4', alpha = 0.1, label = 'R^2 (training):{0:.2f}'.format(r2_train))
+plt.plot([min(y_train_h), max(y_train_h)], [0,0], color = 'C2')
+plt.legend()
+plt.title("Residule plot")
+plt.show()
+
+....................................................................................................................................................................
+#Fit another linear model using all variables to predict MAXDEMAND.
+
+#Compare the results with the previous model.
+
+
+X = MergeData[['Diff_temp_/day(°C)']]
+y = MergeData['MAXDEMAND']
+X_train, X_test, y_train, y_test = train_test_split (X, y, test_size = 0.10, train_size = 0.90, random_state = 42)
+
+lm = linear_model.LinearRegression()
+model = lm.fit(X_train, y_train)
+
+# coefficients
+
+print('Coefficients: ', end = ' ')
+print(lm.coef_)
+print('')
+
+# intercept:
+print('Intercept: ', end = ' ')
+print(lm.intercept_)
+print('')
+
+# R^2
+r2_test = lm.score (X_test, y_test)
+r2_train = lm.score (X_train, y_train)
+
+print('Coefficient of determination (test): {0:.2f}'.format (r2_test))
+print('Coefficient of determination (training): {0:.2f}'.format (r2_train))
+
+....................................................................................................................................................................
+# Comparing two models: 
+# Both models are almost same variance in MAXDEMAND.   From 56% to 55% Variance.
+
+....................................................................................................................................................................
+# Binning maximum energy used. 
+
+def bin_rating(x):
+    """
+   Equal length descritisation.
+    
+        [min, 4080.605), [4080.605, 5452.68), [5452.68, 6824.755 ) [6824.755, max]
+        
+        min = 2708.53
+        max = 8196.83
+
+    
+    """
+    LOWER = 4080.605
+
+    MID = 5452.68
+    
+    UPPER = 6824.755
+
+    
+    # [min, 4080.605)
+    if x < LOWER:        
+        return 1
+    
+    #  [4080.605, 5452.68)
+    elif LOWER <= x < MID:
+        return 2 
+    
+    #  [5452.68, 6824.755 ) 
+   
+    elif MID <= x < UPPER:
+        return 3
+
+   #[6824.755, max]
+    return 4
+
+# apply the function on the series
+MergeData['bin_rating'] = MergeData['MAXDEMAND'].apply(bin_rating)
+
+# also, print out the min/max for this feature
+MergeData
+....................................................................................................................................................................
+features = MergeData[['Minimum temperature (°C)','Maximum temperature (°C)','Rainfall (mm)','Evaporation (mm)','Sunshine (hours)']]
+classlabel = MergeData['bin_rating']
+
+features_train, features_test, class_train, class_test = train_test_split(features, classlabel, train_size = 0.8, test_size = 0.2, random_state = 42)
+
+scaler = preprocessing.StandardScaler().fit(features_train)
+features_train = scaler.transform(features_train)
+features_test = scaler.transform(features_test)
+
+knn = neighbors.KNeighborsClassifier(n_neighbors=5)
+knn.fit(features_train, class_train)
+
+predictions = knn.predict(features_test)
+print("Model accuracy scores by kNN method:",accuracy_score(class_test, predictions))
+....................................................................................................................................................................
+from sklearn.model_selection import KFold
+
+k = 10
+kf = KFold(n_splits = k, shuffle = True, random_state = 42)
+accuracy_scores = []
+
+for train_index, test_index in kf.split(MergeData):
+    features_train = features.iloc[train_index, :]
+    features_test = features.iloc[test_index, :]
+    
+    class_train = classlabel[train_index]
+    class_test = classlabel[test_index]
+    
+    scaler = preprocessing.StandardScaler().fit(features_train)
+    features_train = scaler.transform(features_train)
+    features_test = scaler.transform(features_test)
+
+    knn = neighbors.KNeighborsClassifier(n_neighbors=5)
+    knn.fit(features_train, class_train)
+    
+    predictions = knn.predict(features_test)
+    accuracy_scores.append(accuracy_score(class_test, predictions))
+    
+    
+print(accuracy_scores)
+print("Model accuracy scores by K-Fold:", sum(accuracy_scores)/k)
+....................................................................................................................................................................
+#................................Question 2 explained...............................................................................................
+....................................................................................................................................................................
+Data_p
+....................................................................................................................................................................
+MergeData.info()
+....................................................................................................................................................................
+from sklearn.metrics.cluster import normalized_mutual_info_score
+
+MergeData['max_temp_binned'] = pd.cut(MergeData['Maximum temperature (°C)'], bins=4)
+MergeData['demand_binned'] = pd.cut(MergeData['MAXDEMAND'], bins = 4)
+display(MergeData)
+nmi = normalized_mutual_info_score(MergeData['demand_binned'],MergeData['max_temp_binned'], average_method = 'min')
+print("NMI : "+ str(nmi))
+....................................................................................................................................................................
+def bin_rating(x):
+    """
+   Equal length descritisation.
+    
+        [min, 4080.605), [4080.605, 5452.68), [5452.68, 6824.755 ) [6824.755, max]
+        
+        min = 2708.53
+        max = 8196.83
+
+    
+    """
+    LOWER = 4080.605
+
+    MID = 5452.68
+    
+    UPPER = 6824.755
+
+    
+    # [min, 4080.605)
+    if x < LOWER:        
+        return 1
+    
+    #  [4080.605, 5452.68)
+    elif LOWER <= x < MID:
+        return 2 
+    
+    #  [5452.68, 6824.755 ) 
+   
+    elif MID <= x < UPPER:
+        return 3
+
+   #[6824.755, max]
+    return 4
+
+# apply the function on the series
+MergeData['bin_rating'] = MergeData['MAXDEMAND'].apply(bin_rating)
+
+# also, print out the min/max for this feature
+MergeData
+....................................................................................................................................................................
+Data_p['PRICECATEGORY'].value_counts()
+display(Data_p.head())
+....................................................................................................................................................................
+# In this function we want to find the maximum daily price category.
+def bin_grade(x):
+
+ 
+    if x == 'LOW':        
+        return 1
+    
+    elif x == 'MEDIUM':
+        return 2 
+    
+    elif x == 'HIGH':
+        return 3
+
+      
+    elif x == 'EXTREME':
+        return 4
+
+# apply the function on the series
+Data_p['Price_bin_grade'] = Data_p['PRICECATEGORY'].apply(bin_grade)
+
+Data_p
+....................................................................................................................................................................
+#Now make them as groups and find the the maximum daily price category
+Data_p2 = Data_p.groupby("Date").max("Price_bin_grade")
+Data_p2
+....................................................................................................................................................................
+# Turning 1,2,3,4 to LOW, MEIUM, HIGH, EXTEREM
+
+def maximum_daily_price(x):
+
+ 
+    if x == 1 :        
+        return 'LOW'
+    
+    elif x == 2:
+        return 'MEDIUM' 
+    
+    elif x == 3:
+        return 'HIGH'
+
+      
+    elif x == 4:
+        return 'EXTREME'
+
+# apply the function on the series
+Data_p2['maximum_daily_price_category'] = Data_p2['Price_bin_grade'].apply(maximum_daily_price)
+
+Data_p2
+....................................................................................................................................................................
+# Merged dataset into a dataframe assigned as MergeData2
+
+MergeData2 = MergeData.merge(Data_p2, how = 'inner', on = 'Date') 
+MergeData2
+....................................................................................................................................................................
+MergeData2.info()
+....................................................................................................................................................................
+FEATURES = ['Price_bin_grade','MAXDEMAND','Minimum temperature (°C)','Maximum temperature (°C)','Sunshine (hours)','Speed of maximum wind gust (km/h)'
+         ,'9am Temperature (°C)','3pm Temperature (°C)','Average_temp_/day(°C)']
+MergeData2[FEATURES].corr(method = 'pearson')
+....................................................................................................................................................................
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12,10))
+
+ax1 = axes[0][0]
+summer_start = '2020-12-01'
+summer_end =  '2021-02-28'
+summer = MergeData2.loc[(MergeData2['Date'] >= summer_start) & (MergeData2['Date'] <= summer_end)]
+summer.plot.scatter (x = 'Maximum temperature (°C)', y = 'Price_bin_grade', title = "summer", ax = ax1, lw = 1, c = 'r')
+print("Pearson r is ",summer['Maximum temperature (°C)'].corr(summer['Price_bin_grade']), "in summer time")
+
+
+ax2 = axes[0][1]
+autumn_start = '2021-3-01'
+autumn_end = '2021-5-31'
+autumn = MergeData2.loc[(MergeData2['Date'] >= autumn_start) & (MergeData2['Date'] <= autumn_end)]
+autumn.plot.scatter (x = 'Maximum temperature (°C)', y = 'Price_bin_grade',title = "autumn", ax = ax2, lw = 1, c = 'b')
+print("Pearson r is ",autumn['Maximum temperature (°C)'].corr(autumn['Price_bin_grade']), "in Autumn time")
+
+
+ax3 = axes[1][0]
+winter_start = '2021-06-01'
+winter_end = '2021-08-31'
+winter = MergeData2.loc[(MergeData2['Date'] >= '2021-06-01') & (MergeData2['Date'] <= '2021-08-31') ]
+winter.plot.scatter (x = 'Maximum temperature (°C)', y = 'Price_bin_grade',title = "winter", ax = ax3, lw = 1, c = 'k')
+print("Pearson r is ",winter['Maximum temperature (°C)'].corr(winter['Price_bin_grade']), "in winter time")
+
+ax4 = axes[1][1]
+Day_start = '2020-01-01'
+Day_end = '2021-08-31'
+Overall = MergeData2.loc[(MergeData2['Date'] >= '2021-01-01') & (MergeData2['Date'] <= '2021-08-31') ]
+Overall.plot.scatter (x = 'Maximum temperature (°C)', y = 'Price_bin_grade',title="Overall_year", ax = ax4, lw = 1, c = 'k')
+print("Pearson r is ",Overall['Maximum temperature (°C)'].corr(Overall['Price_bin_grade']), "Overall_year")
+
+
+plt.subplots_adjust(left = 0.1,bottom = 0.1, right = 0.9, top = 0.9, wspace = 0.4, hspace = 0.4)
+plt.show()
+....................................................................................................................................................................
+##  Evaluation
+from sklearn import linear_model
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+X = MergeData2[['TOTALDEMAND']]
+y = MergeData2['Price_bin_grade']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state = 42)
+
+
+# initialise the model
+lm = linear_model.LinearRegression()
+
+
+#model = lm.fit(X_train, y_train)
+
+model = lm.fit(X_train , y_train)
+
+y_test_predictions = lm.predict(X_test)
+
+print('actual MAXDEMAND values of the first 10 test data:')
+print(y_test[0:10])
+print('')
+print('predicted MAXDEMAND values of the first 10 test data:')
+print(y_test_predictions[0:10])
+print('')
+
+# coefficients
+
+print('Coefficients: ', end = ' ')
+print(lm.coef_)
+print('')
+
+# intercept:
+print('Intercept: ', end = ' ')
+print(lm.intercept_)
+print('')
+
+# R^2
+r2_test = lm.score(X_test, y_test)
+r2_train = lm.score(X_train, y_train)
+
+print('Coefficient of determination (test): {0:.2f}'.format(r2_test))
+print('Coefficient of determination (training): {0:.2f}'.format(r2_train))
+
+....................................................................................................................................................................
+# correlation values- Strong positive correlation has light colour, negative correlation has dark colour.
+
+plt.figure(figsize = (16,8))
+sns.heatmap(MergeData2.corr(), annot = True, annot_kws = {"size":12})
+
+plt.title("Corrilation Map to explain the strength of relationship")
+
+....................................................................................................................................................................
+##get just the features
+features = MergeData2[['Minimum temperature (°C)','Maximum temperature (°C)','Sunshine (hours)','Evaporation (mm)'
+                  ,'Speed of maximum wind gust (km/h)']].astype(float)
+
+##get just the class labels
+classlabel = MergeData2['Price_bin_grade']
+
+##randomly select 66% of the instances to be training and the rest to be testing
+features_train, features_test, class_train, class_test = train_test_split(features, classlabel, train_size = 0.8, test_size = 0.2, random_state = 42)
+
+#normalise the data to have 0 mean and unit variance using the library functions.  This will help for later
+#computation of distances between instances
+scaler = preprocessing.StandardScaler().fit(features_train)
+features_train = scaler.transform(features_train)
+features_test = scaler.transform(features_test)
+
+knn = neighbors.KNeighborsClassifier(n_neighbors=5)
+knn.fit(features_train, class_train)
+
+# We compare our prediction with the actual class label and report the overall accuracy.
+predictions = knn.predict(features_test)
+print("Model accuracy scores by kNN method:",accuracy_score(class_test, predictions))
+....................................................................................................................................................................
+##get just the features
+
+data = MergeData2[['Minimum temperature (°C)','Maximum temperature (°C)','Sunshine (hours)','Evaporation (mm)'
+                  ,'Speed of maximum wind gust (km/h)','9am Temperature (°C)']].astype(float)
+##get just the class labels
+classlabel = MergeData2['maximum_daily_price_category']
+
+##randomly select 66% of the instances to be training and the rest to be testing
+X_train, X_test, y_train, y_test = train_test_split(data,classlabel, train_size = 0.87, test_size = 0.13, random_state = 42)
+
+#normalise the data to have 0 mean and unit variance using the library functions.  This will help for later
+#computation of distances between instances
+scaler = preprocessing.StandardScaler().fit(X_train)
+X_train = scaler.transform(X_train)
+X_test = scaler.transform(X_test)
+....................................................................................................................................................................
+knn = neighbors.KNeighborsClassifier(n_neighbors = 7)
+knn.fit(X_train, y_train)
+....................................................................................................................................................................
+# We compare our prediction with the actual class label and report the overall accuracy.
+y_pred = knn.predict(X_test)
+print(accuracy_score(y_test, y_pred))
+....................................................................................................................................................................
+from sklearn.model_selection import KFold
+
+k = 14
+kf = KFold(n_splits = k, shuffle = True, random_state = 35)
+accuracy_scores = []
+
+for train_index, test_index in kf.split(MergeData2):
+    features_train = features.iloc[train_index, :]
+    features_test = features.iloc[test_index, :]
+    
+    class_train = classlabel[train_index]
+    class_test = classlabel[test_index]
+    
+    scaler = preprocessing.StandardScaler().fit(features_train)
+    features_train = scaler.transform(features_train)
+    features_test = scaler.transform(features_test)
+
+    knn = neighbors.KNeighborsClassifier(n_neighbors=5)
+    knn.fit(features_train, class_train)
+    
+    predictions = knn.predict(features_test)
+    accuracy_scores.append(accuracy_score(class_test, predictions))
+    
+   
+    
+print(accuracy_scores)
+print("Model accuracy scores by K-Fold:", sum(accuracy_scores)/k)
+....................................................................................................................................................................
+# Draw a graph of decision tree classification accuracy when the size of the training set is varied 
+import numpy
+ks = range(1,95,5)
+accu_list = []
+for k in ks:
+    knn = neighbors.KNeighborsClassifier(n_neighbors = k)
+    knn.fit(X_train, y_train) 
+    y_pred = knn.predict(X_test)
+    accu_list.append(accuracy_score(y_test, y_pred))
+    
+
+plt.plot(ks,accu_list)
+plt.show()
+
+....................................................................................................................................................................
+# Make them into clusters
+Data_p.plot.scatter (x = 'PRICECATEGORY',
+                    y = 'TOTALDEMAND', title = "The Total Demand with time",c = '#07700a', alpha = 0.7) 
+....................................................................................................................................................................
+# Length Descretization
+MergeData.MAXDEMAND.hist(bins = 4, figsize = (10,6))
+plt.xlabel("MAXDEMAND")
+plt.ylabel("Length desctisation")
+plt.title('Distribution of rating after binning')
+
+
+plt.show()
+....................................................................................................................................................................
+# the distribution is not similar in both sides, so ......chi2....... was calculated to check the distribution.
+....................................................................................................................................................................
+Data_pc = pd.get_dummies(Data_p, columns = ['PRICECATEGORY'])
+Data_pc
+....................................................................................................................................................................
+MergeData3 = MergeData2.merge(Data_pc, how = 'inner', on = 'Date') 
+MergeData3
+....................................................................................................................................................................
+from sklearn.feature_selection import SelectKBest, chi2
+
+X = MergeData3[['PRICECATEGORY_EXTREME','PRICECATEGORY_HIGH','PRICECATEGORY_LOW','PRICECATEGORY_MEDIUM']]
+y = MergeData3['Date']
+# instantiate
+feature_selector = SelectKBest(chi2, k = 4) #...........Chi2
+
+X_new = feature_selector.fit_transform(X,y)
+X_new
+....................................................................................................................................................................
+feature_selector = SelectKBest(mutual_info_classif, k = 4) #.............Mutual Information
+
+X_new = feature_selector.fit_transform(X,y)
+X_new
+....................................................................................................................................................................
+for i in feature_selector.get_support(indices = True):
+    print('Word:', data.keys()[i])
+    print('Chi Square Score:', feature_selector.scores_[i])
+    
+    print()
+....................................................................................................................................................................
+feature_selector.get_support(indices = True)
+X,y 
+y
+....................................................................................................................................................................
+# this means that columns 1,2,3,4 are selected.(Date, Maximum temperature, minimum temperature and rainfall)
+feature_selector.get_support(indices = True)
+....................................................................................................................................................................
+# these columns are selected because they have the high chi2 score
+feature_selector.scores_
+....................................................................................................................................................................
+##randomly select 66% of the instances to be training and the rest to be testing
+X_train, X_test, y_train, y_test = train_test_split(X_new,y, train_size = 0.87, test_size = 0.13, random_state = 42)
+
+#instantiate
+feature_selector = SelectKBest(chi2, k = 4) #...........Chi2
+
+#perform selection
+X_train = feature_selector.fit_transform(X_train,y_train)
+X_test = feature_selector.transform(X_test)
+
+#normalise the data to have 0 mean and unit variance using the library functions.  This will help for later
+#computation of distances between instances
+scaler = preprocessing.StandardScaler()
+X_train = scaler.fit_transform(X_train, y_train)
+X_test = scaler.transform(X_test)
+
+imputer = SimpleImputer()
+X_train = imputer.fit_transform(X_train)
+X_test = imputer.transform(X_test)
+
+# Fitting Data/training
+knn = neighbors.KNeighborsClassifier(n_neighbors = 5)
+knn.fit(X_train, y_train)
+
+
+....................................................................................................................................................................
+X_train
+....................................................................................................................................................................
+#prediction/test
+y_pred = knn.predict(X_test)
+y_pred
+....................................................................................................................................................................
+# Pricncipal Component Analysis 
+pca = PCA(n_components=2)
+X_train = pca.fit_transform(X_train)
+X_test = pca.transform(X_test)
+
+
+....................................................................................................................................................................
+X_train.shape
+
+....................................................................................................................................................................
+# after shaping if we check the X_train
+
+X_train
+....................................................................................................................................................................
+X_test.shape
+....................................................................................................................................................................
+X_test
+....................................................................................................................................................................
+# shows us how much varient of the original data that the pca has retained.
+pca.explained_variance_ratio_
+....................................................................................................................................................................
+# no data loss from compression via Pricncipal Component Analysis
+pca.explained_variance_ratio_.sum()
+....................................................................................................................................................................
+# Frequency Descretization
+             
+MergeData.MAXDEMAND.hist(bins = 10, figsize = (10,6))
+plt.xlabel("MAXDEMAND")
+plt.ylabel("Frequency Desctisation")
+plt.title('Distribution of rating after binning')
+
+
+plt.show()
+....................................................................................................................................................................
+# Count values of PriceCategory data entries
+Data_p['PRICECATEGORY'].value_counts()
+....................................................................................................................................................................
+Data_p.PRICECATEGORY.unique()
+....................................................................................................................................................................
+....................................................................................................................................................................
+# explaining the price category in pie chart
+P_CATEGORY = ["LOW","MEDIUM","HIGH","EXTREME"]
+co2 = [7570, 3061,777,256]
+colors = ['y','g','b','r' ]
+plt.pie(co2,explode=None,labels = P_CATEGORY,colors = colors)
+plt.axis('equal')
+....................................................................................................................................................................
+# calculating the normalised mutual information for the two categorical variables.( small number means weak relationship) 
+
+from sklearn.metrics import normalized_mutual_info_score
+normalized_mutual_info_score(Data_p['SETTLEMENTDATE'], Data_p['PRICECATEGORY'])
+....................................................................................................................................................................
+feature_selector = SelectKBest(mutual_info_classif, k=2)
+
+X_train = feature_selector.fit_transform(X_train, y_train)
+X_test = feature_selector.transform(X_test)
+feature_selector.scores_
+....................................................................................................................................................................
+
+....................................................................................................................................................................
+Good Luck...Send your thanks to 
+https://www.linkedin.com/in/sidhra-jani-abbb8921/
+....................................................................................................................................................................
+
+....................................................................................................................................................................
+
+....................................................................................................................................................................
+
+....................................................................................................................................................................
+
+....................................................................................................................................................................
+
+....................................................................................................................................................................
+
+....................................................................................................................................................................
+
